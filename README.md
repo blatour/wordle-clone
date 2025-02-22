@@ -1,4 +1,5 @@
 # wordle-clone
+this project was an attempt to make an entire game using AI.  I did not write any of the code,  I simply provided the prompt and then used the AI to write the code.  The information below is the prompt that I used to set the tone for the project
 
 # Project Overview
 The general purpose of this project is to write a clone of the popular word game Wordle. this clone will be written in python and will be a web application.
