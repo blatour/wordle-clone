@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Guessing Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .game-container {
+            text-align: center;
+            padding-bottom: 200px;
+            margin-right: 290px;  /* Increased margin to accommodate wider hint panel */
+            padding-left: 60px;
+        }
+        .guess-input {
+            font-size: 18px;
+            padding: 5px;
+            margin: 10px;
+        }
+        .button {
+            background-color: #98c1d9;  /* Pastel blue */
+            color: #2c3e50;
+            border: none;
+            padding: 15px 30px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .button:hover {
+            background-color: #7ca7bf;  /* Darker pastel blue */
+        }
+        .result {
+            margin: 20px;
+            font-size: 18px;
+        }
+        .history {
+            margin-top: 20px;
+        }
+        .statistics {
+            display: none;
+        }
+        .rules-button {
+            display: none;
+        }
+        .rules-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.3);
+            z-index: 1001;
+            
+            display: none;  /* This will be overridden when showing the modal */
+            justify-content: center;
+            align-items: center;
+        }
+        .rules-content {
+            position: relative;
+            background-color: #ffffff;
+            padding: 20px;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            
+            margin: 0;
+            
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .close-rules {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #98c1d9;  /* Pastel blue */
+        }
+        .close-rules:hover {
+            color: #7ca7bf;  /* Darker pastel blue */
+        }
+        .rules-content h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        .rules-content ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .rules-content li {
+            margin-bottom: 15px;
+            padding-left: 20px;
+            position: relative;
+        }
+        .rules-content li:before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #4CAF50;
+        }
+        .example-grid {
+            display: flex;
+            gap: 5px;
+            margin: 10px 0;
+            justify-content: flex-start;
+        }
+        .example-letter {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #d3d3d3;
+            font-weight: bold;
+            background-color: #ffffff;
+            color: #2c3e50;
+        }
+        .example-correct {
+            background-color: #a8e6cf;  /* Pastel green */
+            border-color: #a8e6cf;
+        }
+        .example-wrong-position {
+            background-color: #ffd3b6;  /* Pastel orange */
+            border-color: #ffd3b6;
+        }
+        .example-incorrect {
+            background-color: #bfbfbf;  /* Pastel gray */
+            border-color: #bfbfbf;
+        }
+        .hint-panel {
+            position: fixed;
+            right: 0; /* Start at right edge */
+            top: 50%;
+            transform: translate(100%, -50%); /* Move off screen to the right */
+            width: 250px;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px 0 0 10px;
+            box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+            max-height: 80vh;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+            z-index: 100;
+        }
+        .hint-panel.open {
+            transform: translate(0, -50%); /* Slide in from right */
+        }
+        .hint-toggle {
+            position: absolute;
+            left: -30px;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: #98c1d9;
+            color: #2c3e50;
+            border: none;
+            border-radius: 5px 0 0 5px;
+            padding: 10px;
+            cursor: pointer;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            height: 120px;
+            font-size: 14px;
+            transition: background-color 0.2s;
+            z-index: 101; /* Ensure button stays above panel */
+        }
+        .hint-toggle:hover {
+            background-color: #7ca7bf;
+        }
+        .hint-panel h3 {
+            margin: 0 0 15px 0;
+            color: #2c3e50;
+            border-bottom: 2px solid #98c1d9;
+            padding-bottom: 10px;
+        }
+        .possible-words {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 10px;
+            transition: opacity 0.3s ease;
+        }
+        .possible-word {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            margin: 4px 0;
+            background-color: #ffffff;
+            color: #2c3e50;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .possible-word:hover {
+            background-color: #e9ecef;
+        }
+        .word-text {
+            font-family: monospace;
+            font-size: 1.1em;
+        }
+        .probability {
+            font-size: 0.9em;
+            color: #6c757d;
+            padding-left: 10px;
+        }
+        .probability-bar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            background-color: rgba(152, 193, 217, 0.1); /* Pastel blue with low opacity */
+            z-index: 0;
+            transition: width 0.3s ease;
+        }
+        .possible-word {
+            position: relative;
+            overflow: hidden;
+        }
+        .word-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+        }
+        .hint-panel:not(.open) .possible-words {
+            opacity: 0;
+        }
+        .menu-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            z-index: 1001;
+            padding: 10px;
+            color: #98c1d9;
+        }
+        .menu-button:hover {
+            color: #7ca7bf;  /* Darker pastel blue */
+        }
+        .side-menu {
+            position: fixed;
+            left: -250px;
+            top: 0;
+            width: 250px;
+            height: 100%;
+            background-color: #f8f9fa;
+            transition: left 0.3s ease;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+        .side-menu.open {
+            left: 0;
+        }
+        .menu-items {
+            padding: 60px 0 0 0;
+            list-style: none;
+            margin: 0;
+            flex-grow: 1;
+        }
+        .menu-items li {
+            padding: 15px 25px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            color: #2c3e50;
+        }
+        .menu-items li:hover {
+            background-color: #e9ecef;
+        }
+        .menu-items a {
+            color: #2c3e50;
+            text-decoration: none;
+            font-size: 16px;
+            display: block;
+        }
+        .menu-statistics {
+            padding: 20px;
+            border-top: 1px solid #e9ecef;
+            background-color: #ffffff;
+        }
+        .menu-statistics h2 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 1.2em;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+        .stat-item {
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+        .stat-value {
+            color: #2c3e50;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        .guess-grid {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+            justify-content: center;
+            width: 100%;
+        }
+        .letter-box {
+            width: 40px;
+            height: 40px;
+            border: 2px solid #d3d3d3;  /* Light gray */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            text-transform: uppercase;
+            background-color: #ffffff;
+            color: #2c3e50;
+        }
+        .correct {
+            background-color: #a8e6cf;  /* Pastel green */
+            border-color: #a8e6cf;
+            color: #2c3e50;
+        }
+        .wrong-position {
+            background-color: #ffd3b6;  /* Pastel orange */
+            border-color: #ffd3b6;
+            color: #2c3e50;
+        }
+        .incorrect {
+            background-color: #bfbfbf;  /* Pastel gray */
+            border-color: #bfbfbf;
+            color: #2c3e50;
+        }
+        .history {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            margin-top: 20px;
+        }
+        .no-words, .error {
+            padding: 10px;
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+        .error {
+            color: #dc3545;
+        }
+        input[type="text"] {
+            border: 2px solid #98c1d9;  /* Pastel blue */
+            border-radius: 5px;
+            color: #2c3e50;
+        }
+        input[type="text"]:focus {
+            border-color: #7ca7bf;  /* Darker pastel blue */
+            outline: none;
+        }
+        button[onclick="makeGuess()"] {
+            background-color: #98c1d9;  /* Pastel blue */
+            color: #2c3e50;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button[onclick="makeGuess()"]:hover {
+            background-color: #7ca7bf;  /* Darker pastel blue */
+        }
+        button[onclick^="startGame"] {
+            background-color: #98c1d9;  /* Pastel blue */
+            color: #2c3e50;
+        }
+        button[onclick^="startGame"]:hover {
+            background-color: #7ca7bf;  /* Darker pastel blue */
+        }
+        /* Add fixed layout container */
+        .layout-container {
+            display: flex;
+            min-height: 100vh;
+            position: relative;
+            padding-left: 60px;
+            transition: padding-left 0.3s ease;
+            padding-right: 0 !important; /* Override any previous padding */
+            overflow-x: hidden;
+        }
+
+        /* Add class for when menu is open */
+        .layout-container.menu-open {
+            padding-left: 310px;
+        }
+
+        /* Update game container to be centered and fixed width */
+        .game-container {
+            flex: 1;
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto !important;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Update hint panel to use fixed positioning */
+        .hint-panel {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 250px;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            max-height: 80vh;
+            overflow-y: auto;
+            /* Don't affect layout flow */
+            z-index: 100;
+        }
+
+        /* Update game area to maintain center alignment */
+        #game-area {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Update difficulty selection to maintain center alignment */
+        #difficulty-selection {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        /* Ensure guesses stay centered */
+        .history {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        /* Ensure consistent input width */
+        #guess-input {
+            width: 200px !important;
+            margin: 10px auto !important;
+        }
+
+        /* Update result area to maintain center alignment */
+        .result {
+            width: 100%;
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        /* Add responsive adjustments */
+        @media (max-width: 1200px) {
+            .layout-container {
+                padding-right: 270px; /* Space for hint panel */
+            }
+        }
+
+        @media (max-width: 768px) {
+            .layout-container {
+                padding-right: 20px;
+            }
+            
+            .hint-panel {
+                display: none; /* Hide hint panel on mobile */
+            }
+        }
+
+        /* Add loading state style */
+        .loading {
+            padding: 10px;
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        .game-end-message {
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .game-end-message p {
+            margin: 10px 0;
+            color: #2c3e50;
+            font-size: 1.2em;
+        }
+
+        .play-again {
+            margin-top: 15px;
+            padding: 12px 24px;
+            font-size: 1.1em;
+            background-color: #98c1d9;
+            color: #2c3e50;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .play-again:hover {
+            background-color: #7ca7bf;
+        }
+    </style>
+</head>
+<body>
+    <div class="layout-container">
+        <button class="menu-button" onclick="toggleMenu()">☰</button>
+        
+        <div id="sideMenu" class="side-menu">
+            <ul class="menu-items">
+                <li onclick="showRules()">Rules</li>
+                <li><a href="/">Back to Main Menu</a></li>
+            </ul>
+            <div class="menu-statistics">
+                <h2>Statistics</h2>
+                <div id="stats-display"></div>
+            </div>
+        </div>
+        
+        <div class="game-container">
+            <h1>Word Guessing Game</h1>
+            
+            <div id="difficulty-selection">
+                <h2>Select Difficulty</h2>
+                <button class="button" onclick="startGame('easy')">Easy (4 letters)</button>
+                <button class="button" onclick="startGame('normal')">Normal (5 letters)</button>
+                <button class="button" onclick="startGame('hard')">Hard (6 letters)</button>
+            </div>
+
+            <div id="game-area" style="display: none;">
+                <div id="game-container">
+                    <input 
+                        type="text" 
+                        id="guess-input" 
+                        maxlength="5" 
+                        placeholder="Enter your guess"
+                        onkeyup="handleInput(event)"
+                        autocomplete="off"
+                    >
+                    <button onclick="makeGuess()">Submit Guess</button>
+                </div>
+                <div id="result" class="result"></div>
+                <div id="guesses" class="history"></div>
+            </div>
+        </div>
+        
+        <div id="hint-panel" class="hint-panel">
+            <button class="hint-toggle" onclick="toggleHintPanel()">Possible Words</button>
+            <h3>Possible Words</h3>
+            <div id="possible-words" class="possible-words"></div>
+        </div>
+    </div>
+
+    <div id="rules-modal" class="rules-modal">
+        <div class="rules-content">
+            <span class="close-rules" onclick="hideRules()">&times;</span>
+            <h2>How to Play</h2>
+            <ul>
+                <li>Guess the word in 10 tries or less</li>
+                <li>Each guess must be a valid word of the correct length:
+                    <ul>
+                        <li>Easy: 4 letters</li>
+                        <li>Normal: 5 letters</li>
+                        <li>Hard: 6 letters</li>
+                    </ul>
+                </li>
+                <li>After each guess, the color of the tiles will change to show how close your guess was to the word:</li>
+            </ul>
+            
+            <h3>Examples:</h3>
+            <p>The word is "HEART"</p>
+            
+            <div class="example-grid">
+                <div class="example-letter example-correct">H</div>
+                <div class="example-letter">E</div>
+                <div class="example-letter">L</div>
+                <div class="example-letter">L</div>
+                <div class="example-letter">O</div>
+            </div>
+            <p><strong>H</strong> is in the word and in the correct spot (Green)</p>
+
+            <div class="example-grid">
+                <div class="example-letter">P</div>
+                <div class="example-letter example-wrong-position">E</div>
+                <div class="example-letter">A</div>
+                <div class="example-letter">C</div>
+                <div class="example-letter">E</div>
+            </div>
+            <p><strong>E</strong> is in the word but in the wrong spot (Yellow)</p>
+
+            <div class="example-grid">
+                <div class="example-letter">W</div>
+                <div class="example-letter">O</div>
+                <div class="example-letter example-incorrect">U</div>
+                <div class="example-letter">L</div>
+                <div class="example-letter">D</div>
+            </div>
+            <p><strong>U</strong> is not in the word (Gray)</p>
+        </div>
+    </div>
+
+    <script>
+        // Define global variables first
+        let currentGameId = null;
+        let wordLength = 0;
+        let attempts = 0;
+        let currentDifficulty = 'normal';
+        const MAX_ATTEMPTS = 10;
+
+        // Define all functions before they're used
+        async function startGame(difficulty) {
+            currentDifficulty = difficulty;
+            try {
+                const response = await fetch('/game', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ difficulty: currentDifficulty })
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                currentGameId = data.gameId;
+                wordLength = data.wordLength;
+                attempts = 0;
+                
+                // Reset game state
+                document.getElementById('difficulty-selection').style.display = 'none';
+                document.getElementById('game-area').style.display = 'block';
+                document.getElementById('result').textContent = '';
+                document.getElementById('guesses').innerHTML = '';
+                
+                // Update input field
+                const guessInput = document.getElementById('guess-input');
+                guessInput.maxLength = wordLength;
+                guessInput.placeholder = `Enter a ${wordLength}-letter word`;
+                guessInput.value = '';
+                guessInput.disabled = false;
+                guessInput.focus();
+                
+                // Initialize hint panel with saved state
+                const hintPanel = document.getElementById('hint-panel');
+                const wasOpen = localStorage.getItem('hintPanelOpen') === 'true';
+                if (wasOpen) {
+                    hintPanel.classList.add('open');
+                }
+                
+                // Update possible words
+                await updatePossibleWords();
+                
+                // Enable submit button
+                const submitButton = document.querySelector('button[onclick="makeGuess()"]');
+                if (submitButton) submitButton.disabled = false;
+                
+            } catch (error) {
+                console.error('Error starting game:', error);
+                alert('Failed to start game. Please try again.');
+            }
+        }
+
+        function toggleMenu() {
+            const menu = document.getElementById('sideMenu');
+            const layout = document.querySelector('.layout-container');
+            if (menu && layout) {
+                menu.classList.toggle('open');
+                layout.classList.toggle('menu-open');
+            }
+        }
+
+        function toggleHintPanel() {
+            const hintPanel = document.getElementById('hint-panel');
+            if (hintPanel) {
+                hintPanel.classList.toggle('open');
+                localStorage.setItem('hintPanelOpen', hintPanel.classList.contains('open'));
+            }
+        }
+
+        function handleInput(event) {
+            const input = event.target;
+            input.value = input.value.toUpperCase();
+            
+            // If Enter key is pressed, submit the guess
+            if (event.key === 'Enter') {
+                makeGuess();
+            }
+        }
+
+        async function makeGuess() {
+            const guessInput = document.getElementById('guess-input');
+            const guess = guessInput.value.trim().toUpperCase();
+            
+            if (!guess || guess.length !== wordLength) {
+                alert(`Please enter a ${wordLength}-letter word`);
+                return;
+            }
+            
+            try {
+                const response = await fetch('/guess', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        guess: guess,
+                        gameId: currentGameId
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.error) {
+                    alert(result.error);
+                    return;
+                }
+                
+                await displayGuessResult(result);
+                
+            } catch (error) {
+                console.error('Error making guess:', error);
+                alert('Failed to submit guess. Please try again.');
+            }
+        }
+
+        async function displayGuessResult(result) {
+            attempts++;
+            const guessesDiv = document.getElementById('guesses');
+            const guessGrid = document.createElement('div');
+            guessGrid.className = 'guess-grid';
+            
+            // Create letter boxes for each character
+            for (let i = 0; i < result.guess.length; i++) {
+                const letterBox = document.createElement('div');
+                letterBox.className = 'letter-box';
+                letterBox.textContent = result.guess[i];
+                
+                // Add the appropriate color class based on feedback
+                switch(result.feedback[i]) {
+                    case 'O':
+                        letterBox.classList.add('correct');
+                        break;
+                    case '?':
+                        letterBox.classList.add('wrong-position');
+                        break;
+                    case 'X':
+                        letterBox.classList.add('incorrect');
+                        break;
+                }
+                
+                guessGrid.appendChild(letterBox);
+            }
+            
+            guessesDiv.appendChild(guessGrid);
+            
+            // Clear input field
+            const guessInput = document.getElementById('guess-input');
+            guessInput.value = '';
+            guessInput.focus();
+            
+            if (result.correct) {
+                handleGameEnd(true, result.word);
+            } else {
+                // Update possible words immediately after displaying the guess
+                try {
+                    await updatePossibleWords();
+                } catch (error) {
+                    console.error('Error updating possible words after guess:', error);
+                }
+                
+                if (attempts >= MAX_ATTEMPTS) {
+                    handleGameEnd(false, result.word);
+                }
+            }
+        }
+
+        async function handleGameEnd(isWin, word) {
+            const resultDiv = document.getElementById('result');
+            const guessInput = document.getElementById('guess-input');
+            const submitButton = document.querySelector('button[onclick="makeGuess()"]');
+            const hintPanel = document.getElementById('hint-panel');
+            
+            // Disable input
+            if (guessInput) guessInput.disabled = true;
+            if (submitButton) submitButton.disabled = true;
+            
+            // Hide hint panel if game is won
+            if (isWin && hintPanel) {
+                hintPanel.classList.remove('open');
+            }
+
+            // Show result and play again button
+            if (resultDiv) {
+                resultDiv.innerHTML = `
+                    <div class="game-end-message">
+                        <p>${isWin ? 'Congratulations! You won!' : 'Game Over!'}</p>
+                        <p>The word was: ${word}</p>
+                        <button class="button play-again" onclick="resetGame()">
+                            Play Again
+                        </button>
+                    </div>
+                `;
+            }
+
+            // Update statistics if available
+            try {
+                await updateStatistics();
+            } catch (error) {
+                console.error('Failed to update statistics:', error);
+            }
+        }
+
+        // Add resetGame function
+        function resetGame() {
+            // Clear game area
+            document.getElementById('guesses').innerHTML = '';
+            document.getElementById('result').innerHTML = '';
+            
+            // Show difficulty selection
+            document.getElementById('difficulty-selection').style.display = 'block';
+            document.getElementById('game-area').style.display = 'none';
+            
+            // Reset game state
+            currentGameId = null;
+            wordLength = 0;
+            attempts = 0;
+            
+            // Enable input and button
+            const guessInput = document.getElementById('guess-input');
+            const submitButton = document.querySelector('button[onclick="makeGuess()"]');
+            if (guessInput) {
+                guessInput.disabled = false;
+                guessInput.value = '';
+            }
+            if (submitButton) submitButton.disabled = false;
+        }
+
+        async function updatePossibleWords() {
+            console.log('Updating possible words...');
+            const possibleWordsDiv = document.getElementById('possible-words');
+            const hintPanel = document.getElementById('hint-panel');
+            
+            if (!possibleWordsDiv || !hintPanel) {
+                console.error('Possible words elements not found');
+                return;
+            }
+
+            try {
+                // Get all current guesses
+                const guesses = Array.from(document.querySelectorAll('.guess-grid'))
+                    .map(grid => ({
+                        word: Array.from(grid.children)
+                            .map(letter => letter.textContent)
+                            .join(''),
+                        feedback: Array.from(grid.children)
+                            .map(letter => {
+                                if (letter.classList.contains('correct')) return 'O';
+                                if (letter.classList.contains('wrong-position')) return '?';
+                                return 'X';
+                            })
+                            .join('')
+                    }));
+                
+                console.log('Current guesses:', guesses);
+
+                const response = await fetch('/get_possible_words', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        gameId: currentGameId,
+                        guesses: guesses
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Received possible words:', data);
+                
+                if (data.possible_words && Array.isArray(data.possible_words)) {
+                    possibleWordsDiv.innerHTML = data.possible_words
+                        .map(item => `
+                            <div class="possible-word" onclick="fillGuess('${item.word}')">
+                                <div class="probability-bar" style="width: ${item.probability}%"></div>
+                                <div class="word-content">
+                                    <span class="word-text">${item.word}</span>
+                                    <span class="probability">${item.probability}%</span>
+                                </div>
+                            </div>
+                        `)
+                        .join('');
+                } else {
+                    possibleWordsDiv.innerHTML = '<div class="no-words">No possible words found</div>';
+                }
+                
+            } catch (error) {
+                console.error('Error updating possible words:', error);
+                possibleWordsDiv.innerHTML = '<div class="error">Failed to update possible words</div>';
+            }
+        }
+
+        function showRules() {
+            const rulesModal = document.getElementById('rules-modal');
+            if (rulesModal) {
+                rulesModal.style.display = 'flex';
+            }
+        }
+
+        function hideRules() {
+            const rulesModal = document.getElementById('rules-modal');
+            if (rulesModal) {
+                rulesModal.style.display = 'none';
+            }
+        }
+
+        // Add updateStatistics function
+        async function updateStatistics() {
+            try {
+                const response = await fetch('/statistics');
+                const stats = await response.json();
+                const statsDiv = document.getElementById('stats-display');
+                
+                if (!statsDiv) {
+                    console.error('Statistics display element not found');
+                    return;
+                }
+
+                statsDiv.innerHTML = `
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">Games Played</div>
+                            <div class="stat-value">${stats.summary.games_played}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Win Rate</div>
+                            <div class="stat-value">${stats.summary.win_rate}%</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Avg Attempts</div>
+                            <div class="stat-value">${stats.summary.avg_attempts}</div>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Failed to load statistics:', error);
+                const statsDiv = document.getElementById('stats-display');
+                if (statsDiv) {
+                    statsDiv.innerHTML = '<p class="error">Statistics not available</p>';
+                }
+            }
+        }
+
+        // Add fillGuess function
+        function fillGuess(word) {
+            const guessInput = document.getElementById('guess-input');
+            if (guessInput) {
+                guessInput.value = word;
+                makeGuess(); // Automatically submit the guess
+            }
+        }
+
+        // Keep DOMContentLoaded at the end
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize menu functionality
+            const menu = document.getElementById('sideMenu');
+            const menuButton = document.querySelector('.menu-button');
+            const layout = document.querySelector('.layout-container');
+
+            if (menuButton && menu && layout) {
+                // Add click outside handler
+                document.addEventListener('click', function(event) {
+                    if (!menu.contains(event.target) && 
+                        !menuButton.contains(event.target) && 
+                        menu.classList.contains('open')) {
+                        menu.classList.remove('open');
+                        layout.classList.remove('menu-open');
+                    }
+                });
+            }
+
+            // Initialize hint panel state
+            const hintPanel = document.getElementById('hint-panel');
+            if (hintPanel) {
+                const wasOpen = localStorage.getItem('hintPanelOpen') === 'true';
+                if (wasOpen) {
+                    hintPanel.classList.add('open');
+                }
+            }
+
+            // Don't auto-start a game, just show difficulty selection
+            const difficultySelection = document.getElementById('difficulty-selection');
+            const gameArea = document.getElementById('game-area');
+            
+            if (difficultySelection) {
+                difficultySelection.style.display = 'block';
+            }
+            if (gameArea) {
+                gameArea.style.display = 'none';
+            }
+            
+            try {
+                updateStatistics();
+            } catch (error) {
+                console.error('Failed to initialize statistics:', error);
+            }
+        });
+    </script>
+</body>
+</html>
